@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CineScope — Catálogo de Filmes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Chart.js — biblioteca externa (Bônus +0,5) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    /* ============================================
+       CINESCOPE — style.css
+       Paleta: Preto cinema + Vermelho + Cinza
+    ============================================ */
+    :root {
+      --red:       #E63946;
+      --red-dark:  #B71C2B;
+      --gold:      #F4C542;
+      --bg:        #F0F2F5;
+      --bg2:       #FFFFFF;
+      --card-bg:   #FFFFFF;
+      --border:    #E0E4EA;
+      --text:      #111827;
+      --muted:     #6B7280;
+      --header-bg: #0D0D0D;
+      --radius:    10px;
+      --radius-lg: 16px;
+      --shadow:    0 4px 20px rgba(0,0,0,0.10);
+    }
+    body.dark {
+      --bg: #0D0D0D; --bg2: #161616; --card-bg: #1C1C1C;
+      --border: #2A2A2A; --text: #F0F0F0; --muted: #9CA3AF;
+      --shadow: 0 4px 20px rgba(0,0,0,0.50);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; transition: background 0.3s, color 0.3s; }
+    img  { max-width: 100%; display: block; }
+    a    { color: inherit; text-decoration: none; }
+
+    /* HEADER */
+    .header { position: sticky; top: 0; z-index: 200; background: var(--header-bg); padding: 0 1.5rem; box-shadow: 0 2px 12px rgba(0,0,0,0.4); }
+    .header-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; height: 64px; gap: 1rem; }
+    .logo { font-family: 'Bebas Neue', sans-serif; font-size: 1.7rem; color: var(--red); cursor: pointer; flex-shrink: 0; }
+    .nav-tabs { display: flex; gap: 0.25rem; flex: 1; }
+    .tab { background: none; border: none; color: rgba(255,255,255,0.60); font-family: 'Inter', sans-serif; font-size: 0.88rem; font-weight: 500; padding: 0.4rem 0.9rem; border-radius: 8px; cursor: pointer; transition: background 0.18s, color 0.18s; display: flex; align-items: center; gap: 0.35rem; white-space: nowrap; }
+    .tab:hover  { background: rgba(255,255,255,0.08); color: #fff; }
+    .tab.active { background: var(--red); color: #fff; }
+    .badge { background: var(--gold); color: #111; font-size: 0.72rem; font-weight: 700; padding: 1px 6px; border-radius: 100px; min-width: 18px; text-align: center; }
+    .header-actions { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+    .btn-toggle { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #fff; width: 38px; height: 38px; border-radius: 8px; cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
+    .btn-toggle:hover { background: var(--red); }
+
+    /* HERO */
+    .hero { background: linear-gradient(135deg, #0D0D0D 0%, #1a0000 60%, #0D0D0D 100%); padding: 4.5rem 2rem 3.5rem; text-align: center; position: relative; overflow: hidden; }
+    .hero::before { content: ''; position: absolute; top: -80px; left: 50%; transform: translateX(-50%); width: 600px; height: 300px; background: radial-gradient(ellipse, rgba(230,57,70,0.18) 0%, transparent 70%); pointer-events: none; }
+    .hero-content { position: relative; z-index: 1; }
+    .hero-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(2.5rem, 7vw, 4.5rem); color: #fff; letter-spacing: 0.04em; margin-bottom: 0.5rem; }
+    .hero-sub { color: rgba(255,255,255,0.60); font-size: 1rem; margin-bottom: 1.75rem; }
+    .search-form { display: flex; max-width: 560px; margin: 0 auto; border-radius: 100px; overflow: hidden; box-shadow: 0 4px 24px rgba(230,57,70,0.25); }
+    .search-input { flex: 1; border: none; padding: 0.9rem 1.5rem; font-family: 'Inter', sans-serif; font-size: 1rem; outline: none; background: #fff; color: #111; min-width: 0; }
+    .btn-search { background: var(--red); color: #fff; border: none; padding: 0.9rem 1.5rem; font-family: 'Inter', sans-serif; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
+    .btn-search:hover { background: var(--red-dark); }
+    .btn-search:disabled { opacity: 0.5; cursor: not-allowed; }
+    .form-error { color: #f87171; font-size: 0.85rem; margin-top: 0.75rem; }
+
+    /* MAIN */
+    .main { max-width: 1200px; margin: 0 auto; padding: 2.5rem 1.5rem; }
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.75rem; }
+    .section-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; color: var(--text); letter-spacing: 0.04em; }
+    .pagination-info { font-size: 0.88rem; color: var(--muted); }
+
+    /* Loading */
+    .loading { display: flex; flex-direction: column; align-items: center; gap: 1rem; padding: 3rem; color: var(--muted); }
+    .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--red); border-radius: 50%; animation: spin 0.8s linear infinite; }
+
+    /* Erro / vazio */
+    .error-msg, .empty-fav { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; padding: 3rem; color: var(--muted); text-align: center; }
+    .error-msg span, .empty-fav span { font-size: 2.5rem; }
+
+    /* Grid de filmes */
+    .movies-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); gap: 1.25rem; }
+
+    /* Card */
+    .movie-card { background: var(--card-bg); border-radius: var(--radius-lg); overflow: hidden; border: 1.5px solid var(--border); cursor: pointer; transition: transform 0.22s, box-shadow 0.22s, border-color 0.22s; animation: fadeUp 0.4s ease both; position: relative; }
+    .movie-card:hover { transform: translateY(-5px); box-shadow: var(--shadow); border-color: var(--red); }
+    .movie-poster { width: 100%; aspect-ratio: 2/3; object-fit: cover; display: block; background: #1a1a1a; }
+    .movie-no-poster { width: 100%; aspect-ratio: 2/3; background: linear-gradient(135deg, #1a1a1a, #2a2a2a); display: flex; align-items: center; justify-content: center; font-size: 3rem; color: #444; }
+    .movie-info { padding: 0.85rem; }
+  .movie-title { font-weight: 600; font-size: 0.88rem; color: var(--text); margin-bottom: 0.25rem; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .movie-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 0.4rem; }
+    .movie-year { font-size: 0.78rem; color: var(--muted); }
+    .movie-rating { font-size: 0.78rem; font-weight: 600; color: var(--gold); }
+    .movie-genre { font-size: 0.72rem; color: var(--red); font-weight: 500; margin-top: 0.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* Botão favorito */
+    .btn-fav { position: absolute; top: 0.5rem; right: 0.5rem; background: rgba(0,0,0,0.65); border: none; color: #fff; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; transition: background 0.2s, transform 0.15s; backdrop-filter: blur(4px); }
+    .btn-fav:hover      { background: var(--red); transform: scale(1.15); }
+    .btn-fav.favoritado { background: var(--red); }
+
+    /* Filtro gênero */
+    .genre-filter-bar { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .genre-filter-bar label { font-size: 0.88rem; color: var(--muted); font-weight: 500; }
+    .genre-select-inline { background: var(--card-bg); border: 1.5px solid var(--border); color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.88rem; padding: 0.4rem 0.75rem; border-radius: 8px; cursor: pointer; outline: none; transition: border-color 0.2s; }
+    .genre-select-inline:focus { border-color: var(--red); }
+
+    /* Paginação */
+    .pagination { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-top: 2rem; }
+    .btn-page { background: var(--card-bg); border: 1.5px solid var(--border); color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.9rem; font-weight: 500; padding: 0.6rem 1.25rem; border-radius: 8px; cursor: pointer; transition: border-color 0.18s, color 0.18s; }
+    .btn-page:hover:not(:disabled) { border-color: var(--red); color: var(--red); }
+    .btn-page:disabled { opacity: 0.35; cursor: not-allowed; }
+    .page-indicator { font-size: 0.9rem; color: var(--muted); min-width: 100px; text-align: center; }
+
+    /* Botão limpar */
+    .btn-clear { background: none; border: 1.5px solid var(--red); color: var(--red); font-family: 'Inter', sans-serif; font-size: 0.85rem; padding: 0.45rem 1rem; border-radius: 8px; cursor: pointer; transition: background 0.18s, color 0.18s; }
+    .btn-clear:hover { background: var(--red); color: #fff; }
+
+    /* Estatísticas */
+    .stats-bar { display: flex; gap: 2rem; padding: 1.5rem 2rem; background: var(--card-bg); border-radius: var(--radius-lg); border: 1.5px solid var(--border); margin-top: 2.5rem; flex-wrap: wrap; }
+    .stat { display: flex; flex-direction: column; gap: 0.2rem; }
+    .stat-num { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: var(--red); letter-spacing: 0.04em; line-height: 1; }
+    .stat-label { font-size: 0.82rem; color: var(--muted); }
+
+    /* Histórico */
+    .history-bar { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
+    .history-tag { background: var(--card-bg); border: 1.5px solid var(--border); color: var(--muted); font-size: 0.82rem; padding: 0.3rem 0.75rem; border-radius: 100px; cursor: pointer; transition: border-color 0.18s, color 0.18s; font-family: 'Inter', sans-serif; }
+    .history-tag:hover { border-color: var(--red); color: var(--red); }
+
+    /* Gráfico */
+    .chart-container { margin-top: 2rem; background: var(--card-bg); border: 1.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; }
+    .chart-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; color: var(--text); letter-spacing: 0.04em; margin-bottom: 1rem; }
+    .chart-wrap { height: 220px; position: relative; }
+
+    /* Modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.80); z-index: 300; display: flex; align-items: center; justify-content: center; padding: 1.5rem; backdrop-filter: blur(4px); }
+    .modal { background: var(--card-bg); border-radius: var(--radius-lg); max-width: 760px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; border: 1.5px solid var(--border); animation: scaleIn 0.25s ease both; }
+    .modal-close { position: absolute; top: 1rem; right: 1rem; background: rgba(0,0,0,0.5); border: none; color: #fff; width: 36px; height: 36px; border-radius: 50%; font-size: 1rem; cursor: pointer; z-index: 10; transition: background 0.2s; }
+    .modal-close:hover { background: var(--red); }
+    .modal-body { display: flex; gap: 2rem; padding: 2rem; }
+    .modal-poster { flex-shrink: 0; width: 200px; border-radius: var(--radius); overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+    .modal-poster img { width: 100%; display: block; }
+    .modal-details { flex: 1; min-width: 0; }
+    .modal-title { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: var(--text); letter-spacing: 0.04em; margin-bottom: 0.5rem; line-height: 1.1; }
+    .modal-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+    .tag { background: var(--bg); border: 1px solid var(--border); font-size: 0.78rem; color: var(--muted); padding: 0.2rem 0.6rem; border-radius: 100px; }
+    .modal-rating-big { font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; color: var(--gold); letter-spacing: 0.04em; display: flex; align-items: baseline; gap: 0.25rem; margin-bottom: 1rem; }
+    .modal-rating-big small { font-family: 'Inter', sans-serif; font-size: 0.88rem; color: var(--muted); }
+    .modal-plot { font-size: 0.95rem; color: var(--muted); line-height: 1.7; margin-bottom: 1.25rem; }
+    .modal-meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 1.5rem; }
+    .meta-item strong { display: block; font-size: 0.75rem; color: var(--red); text-transform: uppercase; letter-spacing: 0.06em; }
+    .meta-item span   { font-size: 0.88rem; color: var(--text); }
+    .btn-fav-modal { background: var(--red); color: #fff; border: none; padding: 0.75rem 1.5rem; border-radius: 100px; font-family: 'Inter', sans-serif; font-size: 0.92rem; font-weight: 600; cursor: pointer; transition: background 0.2s, transform 0.15s; }
+    .btn-fav-modal:hover { background: var(--red-dark); transform: translateY(-1px); }
+    .btn-fav-modal.favoritado { background: transparent; color: var(--red); border: 1.5px solid var(--red); }
+
+    /* Toast */
+    .toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: #1f2937; color: #fff; padding: 0.75rem 1.5rem; border-radius: 100px; font-size: 0.9rem; font-weight: 500; z-index: 400; white-space: nowrap; box-shadow: 0 4px 20px rgba(0,0,0,0.3); transition: opacity 0.3s, transform 0.3s; }
+    .toast.toast-show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.toast-hide { opacity: 0; transform: translateX(-50%) translateY(10px); }
+
+    /* Footer */
+    .footer { text-align: center; padding: 2rem; font-size: 0.82rem; color: var(--muted); border-top: 1px solid var(--border); margin-top: 2rem; }
+    .footer a { color: var(--red); }
+
+    /* Utilitários */
+    .hidden { display: none !important; }
+
+    /* Animações */
+    @keyframes fadeUp  { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes scaleIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+    @keyframes spin    { to { transform: rotate(360deg); } }
+
+    .movie-card:nth-child(1) { animation-delay: 0.03s; }
+    .movie-card:nth-child(2) { animation-delay: 0.07s; }
+    .movie-card:nth-child(3) { animation-delay: 0.11s; }
+    .movie-card:nth-child(4) { animation-delay: 0.15s; }
+    .movie-card:nth-child(5) { animation-delay: 0.19s; }
+    .movie-card:nth-child(6) { animation-delay: 0.23s; }
+
+    /* Dark mode ajustes */
+    body.dark .card, body.dark .movie-card { background: #1C1C1C; border-color: #2A2A2A; }
+    body.dark .search-input { background: #1C1C1C; color: #f0f0f0; }
+    body.dark .genre-select-inline { background: #1C1C1C; color: #f0f0f0; }
+    body.dark tbody tr:nth-child(even) { background: #111827; }
+
+    /* Responsivo */
+    @media (max-width: 768px) {
+      .hero { padding: 3rem 1.25rem 2.5rem; }
+      .main { padding: 2rem 1rem; }
+      .movies-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem; }
+      .modal-body { flex-direction: column; }
+      .modal-poster { width: 140px; }
+      .modal-meta-grid { grid-template-columns: 1fr; }
+      .stats-bar { gap: 1.25rem; padding: 1.25rem; }
+      .nav-tabs .tab { font-size: 0.78rem; padding: 0.35rem 0.6rem; }
+    }
+    @media (max-width: 480px) {
+      .movies-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body class="light">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-inner">
+      <span class="logo" id="btn-home">🎬 CineScope</span>
+      <nav class="nav-tabs">
+        <button class="tab active" data-tab="catalogo">Catálogo</button>
+        <button class="tab" data-tab="buscar">Buscar</button>
+        <button class="tab" data-tab="favoritos">❤️ Favoritos <span class="badge" id="badge-fav" style="display:none">0</span></button>
+      </nav>
+      <div class="header-actions">
+        <button class="btn-toggle" id="btn-toggle" title="Alternar tema">🌙</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO SEARCH -->
+  <section class="hero">
+    <div class="hero-content">
+      <h1 class="hero-title">Descubra seu próximo filme</h1>
+      <p class="hero-sub">Explore o catálogo, busque filmes e salve seus favoritos.</p>
+      <form class="search-form" id="search-form">
+        <input type="text" id="search-input" class="search-input" placeholder="Ex: Matrix, Interstellar, Godfather..." autocomplete="off">
+        <button type="submit" class="btn-search" id="btn-search">Buscar</button>
+      </form>
+      <p class="form-error hidden" id="form-error">Digite o nome de um filme.</p>
+    </div>
+  </section>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- CATÁLOGO -->
+    <section id="section-catalogo">
+      <div class="section-header">
+        <h2 class="section-title">🏆 Os Melhores de Todos os Tempos</h2>
+        <span class="pagination-info">Top filmes pelo IMDb</span>
+      </div>
+      <div class="loading" id="loading-catalogo"><div class="spinner"></div><p>Carregando catálogo...</p></div>
+      <div class="movies-grid" id="catalog-grid"></div>
+    </section>
+
+    <!-- RESULTADOS -->
+    <section id="results-section" class="hidden">
+      <div class="section-header">
+        <h2 class="section-title" id="results-title">Resultados</h2>
+        <span class="pagination-info" id="pagination-info"></span>
+      </div>
+      <div class="genre-filter-bar">
+        <label for="genre-filter-busca">Filtrar por gênero:</label>
+        <select id="genre-filter-busca" class="genre-select-inline">
+          <option value="">Todos os gêneros</option>
+        </select>
+      </div>
+      <div class="loading hidden" id="loading"><div class="spinner"></div><p>Buscando filmes...</p></div>
+      <div class="error-msg hidden" id="error-msg"><span>😕</span><p id="error-text">Nenhum resultado.</p></div>
+      <div class="movies-grid" id="movies-grid"></div>
+      <div class="pagination hidden" id="pagination">
+        <button class="btn-page" id="btn-prev" disabled>← Anterior</button>
+        <span class="page-indicator" id="page-indicator">Página 1</span>
+        <button class="btn-page" id="btn-next">Próxima →</button>
+      </div>
+    </section>
+
+    <!-- FAVORITOS -->
+    <section id="section-favoritos" class="hidden">
+      <div class="section-header">
+        <h2 class="section-title">❤️ Meus Favoritos</h2>
+        <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
+          <select id="genre-select" class="genre-select-inline"><option value="">Todos os gêneros</option></select>
+          <button class="btn-clear" id="btn-clear-fav">Limpar tudo</button>
+        </div>
+      </div>
+      <div class="movies-grid" id="fav-grid"></div>
+      <div class="empty-fav hidden" id="empty-fav"><span>🎞️</span><p>Nenhum favorito ainda.<br>Clique em 🤍 em qualquer filme!</p></div>
+      <div class="chart-container hidden" id="chart-container">
+        <h3 class="chart-title">📊 Notas dos seus favoritos</h3>
+        <div class="chart-wrap"><canvas id="fav-chart"></canvas></div>
+      </div>
+    </section>
+
+    <!-- ESTATÍSTICAS -->
+    <div class="stats-bar">
+      <div class="stat"><span class="stat-num" id="stat-total">0</span><span class="stat-label">filmes favoritados</span></div>
+      <div class="stat"><span class="stat-num" id="stat-avg">—</span><span class="stat-label">nota média</span></div>
+      <div class="stat"><span class="stat-num" id="stat-searches">0</span><span class="stat-label">buscas realizadas</span></div>
+    </div>
+    <div class="history-bar" id="history-bar"></div>
+
+  </main>
+
+  <!-- MODAL -->
+  <div class="modal-overlay hidden" id="modal-overlay">
+    <div class="modal">
+      <button class="modal-close" id="modal-close">✕</button>
+      <div id="modal-content"></div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast hidden" id="toast"></div>
+
+  <footer class="footer">
+    <p>Dados por <a href="https://www.omdbapi.com/" target="_blank">OMDb API</a> • CineScope 2026</p>
+  </footer>
+
+<script>
+/* ============================================================
+   CINESCOPE — JavaScript
+   Técnicas: DOM manipulation, Event delegation, Fetch API,
+   async/await, LocalStorage, Promise.all, try/catch, Chart.js
+============================================================ */
+
+/* ── API ───────────────────────────────────────────────────── */
+const API_KEY  = '8e8039a8';
+const BASE_URL = 'https://www.omdbapi.com/';
+
+/** Busca filmes pelo título (paginado) */
+async function searchMovies(query, page = 1) {
+  const url = `${BASE_URL}?apikey=${API_KEY}&s=${encodeURIComponent(query)}&type=movie&page=${page}`;
+  try {
+    const res  = await fetch(url);
+    if (!res.ok) throw new Error(`Erro HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.Response === 'False') throw new Error(data.Error || 'Sem resultados.');
+    return { movies: data.Search || [], totalResults: parseInt(data.totalResults, 10) || 0 };
+  } catch (e) { throw new Error(e.message || 'Falha na API.'); }
+}
+
+/** Busca detalhes completos de um filme (poster, sinopse, nota) */
+async function getMovieDetails(imdbID) {
+  const url = `${BASE_URL}?apikey=${API_KEY}&i=${imdbID}&plot=full`;
+  try {
+    const res  = await fetch(url);
+    if (!res.ok) throw new Error(`Erro HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.Response === 'False') throw new Error(data.Error || 'Filme não encontrado.');
+    return data;
+  } catch (e) { throw new Error(e.message || 'Erro ao buscar detalhes.'); }
+}
+
+/* IDs do catálogo (Top IMDb) */
+const CATALOG_IDS = [
+  'tt0111161','tt0068646','tt0468569','tt0071562','tt0050083',
+  'tt0108052','tt0167260','tt0110912','tt0060196','tt0137523',
+  'tt0120737','tt0109830','tt0816692','tt0133093','tt0099685',
+  'tt0073486','tt0114369','tt0102926','tt0172495','tt0245429',
+];
+
+const GENRES = [
+  'Action','Adventure','Animation','Biography','Comedy','Crime',
+  'Documentary','Drama','Fantasy','Horror','Musical','Mystery',
+  'Romance','Sci-Fi','Thriller','Western',
+];
+
+/* ── LOCALSTORAGE ──────────────────────────────────────────── */
+const KEYS = { FAV: 'cs_fav', HIST: 'cs_hist', THEME: 'cs_theme', SEARCHES: 'cs_searches' };
+
+const getFavorites   = () => { try { return JSON.parse(localStorage.getItem(KEYS.FAV)) || []; } catch { return []; } };
+const saveFavorites  = f  => localStorage.setItem(KEYS.FAV, JSON.stringify(f));
+const isFavorite     = id => getFavorites().some(f => f.imdbID === id);
+
+function toggleFavorite(movie) {
+  const favs  = getFavorites();
+  const idx   = favs.findIndex(f => f.imdbID === movie.imdbID);
+  if (idx >= 0) { favs.splice(idx, 1); saveFavorites(favs); return false; }
+  favs.unshift(movie); saveFavorites(favs); return true;
+}
+
+const getHistory    = () => { try { return JSON.parse(localStorage.getItem(KEYS.HIST)) || []; } catch { return []; } };
+function addHistory(q) {
+  const h = getHistory().filter(x => x.toLowerCase() !== q.toLowerCase());
+  h.unshift(q);
+  localStorage.setItem(KEYS.HIST, JSON.stringify(h.slice(0, 8)));
+}
+
+const getSearchCount = ()  => parseInt(localStorage.getItem(KEYS.SEARCHES) || '0', 10);
+const incSearchCount = ()  => localStorage.setItem(KEYS.SEARCHES, String(getSearchCount() + 1));
+const getSavedTheme  = ()  => localStorage.getItem(KEYS.THEME) || 'light';
+const saveTheme      = t   => localStorage.setItem(KEYS.THEME, t);
+
+/* ── ESTADO ────────────────────────────────────────────────── */
+const state = { query: '', page: 1, totalPages: 1, tab: 'catalogo', genre: '' };
+
+/* ── SELETORES ─────────────────────────────────────────────── */
+const $ = id => document.getElementById(id);
+const searchForm   = $('search-form'),   searchInput = $('search-input');
+const btnSearch    = $('btn-search'),    formError   = $('form-error');
+const btnToggle    = $('btn-toggle'),    btnHome     = $('btn-home');
+const catalogGrid  = $('catalog-grid'), moviesGrid  = $('movies-grid');
+const favGrid      = $('fav-grid'),      badgeFav    = $('badge-fav');
+const catalogSec   = $('section-catalogo'), resultsSec = $('results-section');
+const favSec       = $('section-favoritos'), emptyFav  = $('empty-fav');
+const loadCat      = $('loading-catalogo'),  loading   = $('loading');
+const errorMsg     = $('error-msg'),         errorText = $('error-text');
+const pagination   = $('pagination'),        btnPrev   = $('btn-prev');
+const btnNext      = $('btn-next'),          pageInd   = $('page-indicator');
+const pageInfo     = $('pagination-info'),   histBar   = $('history-bar');
+const statTotal    = $('stat-total'),        statAvg   = $('stat-avg');
+const statSearches = $('stat-searches'),     toast     = $('toast');
+const modalOverlay = $('modal-overlay'),     modalContent = $('modal-content');
+const modalClose   = $('modal-close'),       chartContainer = $('chart-container');
+const genreSelect  = $('genre-select'),      genreFilterBusca = $('genre-filter-busca');
+const btnClearFav  = $('btn-clear-fav');
+
+/* ── INICIALIZAÇÃO ─────────────────────────────────────────── */
+function init() {
+  // Restaura tema
+  const theme = getSavedTheme();
+  document.body.className = theme;
+  btnToggle.textContent   = theme === 'dark' ? '☀️' : '🌙';
+
+  // Preenche selects de gênero (querySelectorAll)
+  GENRES.forEach(g => {
+    document.querySelectorAll('#genre-select, #genre-filter-busca').forEach(sel => {
+      const o = document.createElement('option'); // createElement
+      o.value = g; o.textContent = g;
+      sel.appendChild(o);
+    });
+  });
+
+  loadCatalog();
+  updateStats();
+  renderHistory();
+  updateBadge();
+
+  /* ── EVENT LISTENERS ── */
+
+  // submit: prevenção de comportamento default
+  searchForm.addEventListener('submit', e => {
+    e.preventDefault(); // Previne recarregar a página
+    const q = searchInput.value.trim();
+    if (!q) { formError.classList.remove('hidden'); searchInput.focus(); return; }
+    formError.classList.add('hidden');
+    state.query = q; state.page = 1;
+    switchTab('buscar');
+    doSearch();
+  });
+
+  // input: feedback em tempo real
+  searchInput.addEventListener('input', () => {
+    btnSearch.disabled = !searchInput.value.trim();
+    if (searchInput.value.trim()) formError.classList.add('hidden');
+  });
+
+  // Tabs (querySelectorAll + forEach)
+  document.querySelectorAll('.tab').forEach(t =>
+    t.addEventListener('click', () => switchTab(t.dataset.tab))
+  );
+
+  btnPrev.addEventListener('click', () => { state.page--; doSearch(); });
+  btnNext.addEventListener('click', () => { state.page++; doSearch(); });
+  btnToggle.addEventListener('click', toggleTheme);
+  btnHome.addEventListener('click', () => { switchTab('catalogo'); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+
+  // change: filtro de gênero
+  genreSelect.addEventListener('change', () => { state.genre = genreSelect.value; renderFavorites(); });
+  genreFilterBusca.addEventListener('change', () => {
+    state.genre = genreFilterBusca.value;
+    filterByGenre();
+  });
+
+  // Fechar modal
+  modalClose.addEventListener('click', closeModal);
+  modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) closeModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); }); // keydown
+
+  btnClearFav.addEventListener('click', () => {
+    if (!confirm('Remover todos os favoritos?')) return;
+    localStorage.removeItem('cs_fav');
+    renderFavorites(); updateStats(); updateBadge(); refreshIcons();
+    showToast('Todos os favoritos removidos.');
+  });
+
+  /* EVENT DELEGATION — um listener no pai cuida de todos os filhos */
+  [catalogGrid, moviesGrid, favGrid].forEach(grid => {
+    grid.addEventListener('click', async e => {
+      const card   = e.target.closest('.movie-card'); // closest()
+      const favBtn = e.target.closest('.btn-fav');
+      if (!card) return;
+      if (favBtn) { e.stopPropagation(); await handleFav(card); }
+      else { openModal(card.dataset.id); }
+    });
+  });
+}
+
+/* ── CATÁLOGO ──────────────────────────────────────────────── */
+async function loadCatalog() {
+  loadCat.classList.remove('hidden');
+  try {
+    // Promise.all: carrega todos em paralelo
+    const results = await Promise.all(CATALOG_IDS.map(id => getMovieDetails(id).catch(() => null)));
+    loadCat.classList.add('hidden');
+    results.filter(Boolean).forEach(m => catalogGrid.appendChild(createCard(m)));
+  } catch (e) {
+    loadCat.innerHTML = `<p style="color:var(--muted)">Erro: ${e.message}</p>`;
+  }
+}
+
+/* ── BUSCA ─────────────────────────────────────────────────── */
+async function doSearch() {
+  showLoad(true); showErr(false);
+  pagination.classList.add('hidden');
+  moviesGrid.innerHTML = '';
+  window.scrollTo({ top: document.querySelector('.hero').offsetHeight, behavior: 'smooth' });
+
+  try {
+    const { movies, totalResults } = await searchMovies(state.query, state.page);
+    if (state.page === 1) { incSearchCount(); addHistory(state.query); renderHistory(); updateStats(); }
+    state.totalPages = Math.ceil(totalResults / 10);
+    pageInfo.textContent = `${totalResults} resultados`;
+    // Filtra por gênero se selecionado
+    const filtered = state.genre ? movies.filter(m => m.Genre && m.Genre.includes(state.genre)) : movies;
+    renderMovies(filtered, moviesGrid);
+    updatePag();
+  } catch (e) {
+    showErr(true, e.message);
+  } finally {
+    showLoad(false); // finally: sempre executado
+  }
+}
+
+/* ── FILTRO LOCAL POR GÊNERO ───────────────────────────────── */
+function filterByGenre() {
+  moviesGrid.querySelectorAll('.movie-card').forEach(card => { // querySelectorAll
+    const match = !state.genre || (card.dataset.genre || '').includes(state.genre);
+    card.classList.toggle('hidden', !match); // classList.toggle
+  });
+}
+
+/* ── RENDERIZAÇÃO ──────────────────────────────────────────── */
+function renderMovies(movies, container) {
+  container.innerHTML = '';
+  if (!movies.length) { showErr(true, 'Nenhum resultado.'); return; }
+  movies.forEach(m => container.appendChild(createCard(m))); // arrow function + forEach
+}
+
+/**
+ * Cria card de filme dinamicamente.
+ * @param {Object} movie - Dados do filme
+ * @returns {HTMLElement}
+ */
+function createCard(movie) {
+  const fav  = isFavorite(movie.imdbID);
+  const hasPoster = movie.Poster && movie.Poster !== 'N/A';
+  const rating    = movie.imdbRating && movie.imdbRating !== 'N/A' ? movie.imdbRating : null;
+
+  const card = document.createElement('div'); // createElement
+  card.className    = 'movie-card';
+  card.dataset.id   = movie.imdbID;           // modificação de atributo
+  card.dataset.genre = movie.Genre || '';
+
+  // template literal para gerar HTML
+  card.innerHTML = `
+    ${hasPoster
+      ? `<img class="movie-poster" src="${movie.Poster}" alt="${movie.Title}" loading="lazy">`
+      : `<div class="movie-no-poster">🎬</div>`}
+    <button class="btn-fav ${fav ? 'favoritado' : ''}" data-id="${movie.imdbID}" title="${fav ? 'Remover' : 'Favoritar'}">
+      ${fav ? '❤️' : '🤍'}
+    </button>
+    <div class="movie-info">
+      <div class="movie-title">${movie.Title}</div>
+      <div class="movie-meta">
+        <span class="movie-year">${movie.Year || '—'}</span>
+        ${rating ? `<span class="movie-rating">⭐ ${rating}</span>` : ''}
+      </div>
+      ${movie.Genre ? `<div class="movie-genre">${movie.Genre.split(',')[0].trim()}</div>` : ''}
+    </div>`;
+  return card;
+}
+
+/* ── FAVORITOS ─────────────────────────────────────────────── */
+async function handleFav(card) {
+  const id  = card.dataset.id;
+  let movie = getFavorites().find(f => f.imdbID === id);
+  if (!movie) {
+    movie = {
+      imdbID: id,
+      Title:  card.querySelector('.movie-title')?.textContent || '',
+      Year:   card.querySelector('.movie-year')?.textContent  || '',
+      Poster: card.querySelector('.movie-poster')?.src        || 'N/A',
+      imdbRating: card.querySelector('.movie-rating')?.textContent?.replace('⭐ ','') || 'N/A',
+      Genre:  card.dataset.genre || '',
+    };
+  }
+  const added = toggleFavorite(movie);
+  showToast(added ? `❤️ "${movie.Title}" adicionado!` : `💔 "${movie.Title}" removido.`);
+  // Sincroniza todos os botões deste filme
+  document.querySelectorAll(`.btn-fav[data-id="${id}"]`).forEach(b => {
+    b.className   = `btn-fav ${added ? 'favoritado' : ''}`;
+    b.textContent = added ? '❤️' : '🤍';
+  });
+  updateBadge(); updateStats();
+  if (state.tab === 'favoritos') renderFavorites();
+}
+
+function renderFavorites() {
+  let favs = getFavorites();
+  if (state.genre) favs = favs.filter(f => f.Genre && f.Genre.includes(state.genre));
+  favGrid.innerHTML = '';
+  if (!favs.length) {
+    emptyFav.classList.remove('hidden');
+    chartContainer.classList.add('hidden');
+  } else {
+    emptyFav.classList.add('hidden');
+    favs.forEach(m => favGrid.appendChild(createCard(m)));
+    chartContainer.classList.remove('hidden');
+    renderChart(favs); // Chart.js
+  }
+}
+
+function updateBadge() {
+  const n = getFavorites().length;
+  badgeFav.textContent = n;
+  badgeFav.style.display = n > 0 ? 'inline' : 'none';
+}
+
+function refreshIcons() {
+  document.querySelectorAll('.btn-fav').forEach(b => {
+    const fav = isFavorite(b.dataset.id);
+    b.className   = `btn-fav ${fav ? 'favoritado' : ''}`;
+    b.textContent = fav ? '❤️' : '🤍';
+  });
+}
+
+/* ── MODAL (poster, sinopse, nota) ─────────────────────────── */
+async function openModal(imdbID) {
+  modalOverlay.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  modalContent.innerHTML = `<div class="loading" style="padding:3rem"><div class="spinner"></div><p>Carregando...</p></div>`;
+
+  try {
+    const m   = await getMovieDetails(imdbID); // async/await + Fetch
+    const fav = isFavorite(imdbID);
+    const poster = m.Poster && m.Poster !== 'N/A' ? m.Poster : null;
+
+    // Template literal: gera HTML com todos os detalhes
+    modalContent.innerHTML = `
+      <div class="modal-body">
+        <div class="modal-poster">
+          ${poster ? `<img src="${poster}" alt="${m.Title}">` : `<div class="movie-no-poster" style="height:260px">🎬</div>`}
+        </div>
+        <div class="modal-details">
+          <h2 class="modal-title">${m.Title}</h2>
+          <div class="modal-tags">
+            ${m.Genre ? m.Genre.split(',').map(g => `<span class="tag">${g.trim()}</span>`).join('') : ''}
+          </div>
+          <div class="modal-rating-big">⭐ ${m.imdbRating || '—'}<small>/ 10 · ${m.imdbVotes || '—'} votos</small></div>
+          <p class="modal-plot">${m.Plot || 'Sinopse não disponível.'}</p>
+          <div class="modal-meta-grid">
+            <div class="meta-item"><strong>Diretor</strong><span>${m.Director || '—'}</span></div>
+            <div class="meta-item"><strong>Elenco</strong><span>${m.Actors || '—'}</span></div>
+            <div class="meta-item"><strong>Ano</strong><span>${m.Year || '—'}</span></div>
+            <div class="meta-item"><strong>Duração</strong><span>${m.Runtime || '—'}</span></div>
+            <div class="meta-item"><strong>País</strong><span>${m.Country || '—'}</span></div>
+            <div class="meta-item"><strong>Premiações</strong><span>${m.Awards || '—'}</span></div>
+          </div>
+          <button class="btn-fav-modal ${fav ? 'favoritado' : ''}" id="modal-fav-btn">
+            ${fav ? '❤️ Remover dos favoritos' : '🤍 Adicionar aos favoritos'}
+          </button>
+        </div>
+      </div>`;
+
+    $('modal-fav-btn').addEventListener('click', () => {
+      const added = toggleFavorite({ imdbID: m.imdbID, Title: m.Title, Year: m.Year, Poster: m.Poster, imdbRating: m.imdbRating, Genre: m.Genre });
+      const btn   = $('modal-fav-btn');
+      btn.className   = `btn-fav-modal ${added ? 'favoritado' : ''}`;
+      btn.textContent = added ? '❤️ Remover dos favoritos' : '🤍 Adicionar aos favoritos';
+      showToast(added ? `❤️ "${m.Title}" adicionado!` : `💔 "${m.Title}" removido.`);
+      updateBadge(); updateStats();
+      document.querySelectorAll(`.btn-fav[data-id="${m.imdbID}"]`).forEach(b => {
+        b.className   = `btn-fav ${added ? 'favoritado' : ''}`;
+        b.textContent = added ? '❤️' : '🤍';
+      });
+      if (state.tab === 'favoritos') renderFavorites();
+    });
+
+  } catch (e) {
+    // try-catch: mensagem de erro amigável
+    modalContent.innerHTML = `<div class="error-msg" style="padding:3rem"><span>😕</span><p>${e.message}</p></div>`;
+  }
+}
+
+function closeModal() {
+  modalOverlay.classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+/* ── PAGINAÇÃO ─────────────────────────────────────────────── */
+function updatePag() {
+  pagination.classList.remove('hidden');
+  btnPrev.disabled  = state.page <= 1;
+  btnNext.disabled  = state.page >= state.totalPages;
+  pageInd.textContent = `Página ${state.page} de ${state.totalPages}`;
+}
+
+/* ── TABS ──────────────────────────────────────────────────── */
+function switchTab(tab) {
+  state.tab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  catalogSec.classList.toggle('hidden', tab !== 'catalogo');
+  resultsSec.classList.toggle('hidden', tab !== 'buscar' || !state.query);
+  favSec.classList.toggle('hidden', tab !== 'favoritos');
+  if (tab === 'favoritos') renderFavorites();
+}
+
+/* ── TEMA ──────────────────────────────────────────────────── */
+function toggleTheme() {
+  const dark = document.body.classList.toggle('dark');
+  document.body.classList.toggle('light', !dark);
+  btnToggle.textContent = dark ? '☀️' : '🌙';
+  saveTheme(dark ? 'dark' : 'light');
+}
+
+/* ── HISTÓRICO ─────────────────────────────────────────────── */
+function renderHistory() {
+  histBar.innerHTML = '';
+  const hist = getHistory();
+  if (!hist.length) return;
+  const lbl = document.createElement('span');
+  lbl.style.cssText = 'font-size:0.78rem;color:var(--muted);align-self:center';
+  lbl.textContent   = 'Buscas recentes:';
+  histBar.appendChild(lbl);
+  hist.forEach(q => {
+    const btn = document.createElement('button');
+    btn.className   = 'history-tag';
+    btn.textContent = q;
+    btn.addEventListener('click', () => {
+      searchInput.value = q; state.query = q; state.page = 1;
+      switchTab('buscar'); doSearch();
+    });
+    histBar.appendChild(btn);
+  });
+}
+
+/* ── ESTATÍSTICAS ──────────────────────────────────────────── */
+function updateStats() {
+  const favs = getFavorites();
+  statTotal.textContent    = favs.length;
+  statSearches.textContent = getSearchCount();
+  const ratings = favs.map(f => parseFloat(f.imdbRating)).filter(r => !isNaN(r));
+  statAvg.textContent = ratings.length
+    ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1) : '—';
+}
+
+/* ── CHART.JS (Bônus +0,5) ─────────────────────────────────── */
+function renderChart(favs) {
+  const canvas = $('fav-chart');
+  if (!canvas) return;
+  const rated = favs.filter(f => f.imdbRating && f.imdbRating !== 'N/A').slice(0, 10);
+  if (!rated.length) { chartContainer.classList.add('hidden'); return; }
+  if (window._chart instanceof Chart) window._chart.destroy();
+  window._chart = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: rated.map(f => f.Title.length > 14 ? f.Title.slice(0, 14) + '…' : f.Title),
+      datasets: [{ label: 'Nota IMDb', data: rated.map(f => parseFloat(f.imdbRating)),
+        backgroundColor: rated.map(f => parseFloat(f.imdbRating) >= 8 ? '#27ae60' : parseFloat(f.imdbRating) >= 7 ? '#f4c542' : '#e63946'),
+        borderRadius: 6, borderSkipped: false }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `⭐ ${c.raw}/10` } } },
+      scales: {
+        y: { min: 0, max: 10, ticks: { color: '#9CA3AF', stepSize: 2 }, grid: { color: 'rgba(128,128,128,0.1)' } },
+        x: { ticks: { color: '#9CA3AF', font: { size: 11 } }, grid: { display: false } },
+      },
+    },
+  });
+}
+
+/* ── TOAST (Bônus +1,0 funcionalidade criativa) ────────────── */
+let toastTimer;
+function showToast(msg) {
+  clearTimeout(toastTimer);
+  toast.textContent = msg;
+  toast.classList.remove('hidden', 'toast-hide');
+  toast.classList.add('toast-show');
+  toastTimer = setTimeout(() => {
+    toast.classList.replace('toast-show', 'toast-hide');
+    setTimeout(() => toast.classList.add('hidden'), 300);
+  }, 2500);
+}
+
+/* ── HELPERS ───────────────────────────────────────────────── */
+const showLoad = show => loading.classList.toggle('hidden', !show);
+const showErr  = (show, msg = '') => { errorMsg.classList.toggle('hidden', !show); if (msg) errorText.textContent = msg; };
+
+/* ── START ─────────────────────────────────────────────────── */
+init();
+</script>
+</body>
+</html>
